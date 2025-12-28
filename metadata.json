@@ -1,0 +1,16 @@
+{
+  "name": "Copy of Copy of Nisbimart Ecosystem",
+  "description": "Enterprise-grade digital commerce platform with AI automation and multi-channel support.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera",
+    "microphone"
+  ],
+  "mobileAppConfig": {
+    "pushEnabled": true,
+    "deepLinks": [
+      "nisbi://app"
+    ],
+    "offlineMode": true
+  }
+}
