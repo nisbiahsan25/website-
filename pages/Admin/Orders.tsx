@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Search, 
@@ -95,12 +94,12 @@ const AdminOrders: React.FC = () => {
       });
 
       setOrders(updatedOrders);
-      db.updateOrders(updatedOrders);
+      await db.updateOrders(updatedOrders);
       setUpdatingId(null);
     }, 400);
   };
 
-  const updateOrderCourier = () => {
+  const updateOrderCourier = async () => {
     if (!selectedOrder) return;
     const updatedOrders = orders.map(o => {
       if (o.id === selectedOrder.id) {
@@ -134,7 +133,7 @@ const AdminOrders: React.FC = () => {
       return o;
     });
     setOrders(updatedOrders);
-    db.updateOrders(updatedOrders);
+    await db.updateOrders(updatedOrders);
     const updatedSel = updatedOrders.find(u => u.id === selectedOrder.id);
     if(updatedSel) setSelectedOrder(updatedSel);
     alert('Logistics updated. Tracking initialized.');
@@ -144,7 +143,7 @@ const AdminOrders: React.FC = () => {
     if (!selectedOrder?.trackingNumber) return;
     setIsFetchingTracking(true);
 
-    setTimeout(() => {
+    setTimeout(async () => {
       const mockEvents: TrackingHistoryEntry[] = [
         { status: 'Out for Delivery', location: 'Local Distribution Center', timestamp: new Date().toISOString() },
         { status: 'Arrived at Hub', location: 'Regional Sorting Center', timestamp: new Date(Date.now() - 3600000 * 2).toISOString() },
@@ -160,7 +159,7 @@ const AdminOrders: React.FC = () => {
       });
 
       setOrders(updatedOrders);
-      db.updateOrders(updatedOrders);
+      await db.updateOrders(updatedOrders);
       const updatedSel = updatedOrders.find(u => u.id === selectedOrder.id);
       if(updatedSel) setSelectedOrder(updatedSel);
       setIsFetchingTracking(false);
@@ -219,7 +218,7 @@ const AdminOrders: React.FC = () => {
                   <div className="text-sm font-bold text-gray-900">{order.customerName}</div>
                   <div className="text-[10px] font-black text-gray-400 uppercase tracking-wider">{order.customerPhone}</div>
                 </td>
-                <td className="px-8 py-5 font-black text-brand-orange">৳{order.total.toFixed(2)}</td>
+                <td className="px-8 py-5 font-black text-brand-orange">৳{(order.total || 0).toFixed(2)}</td>
                 <td className="px-8 py-5">
                   <div className="relative inline-block w-48">
                     {updatingId === order.id ? (
@@ -281,7 +280,7 @@ const AdminOrders: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Revenue</p>
-                  <p className="text-4xl font-black text-brand-orange">৳{selectedOrder.total.toFixed(2)}</p>
+                  <p className="text-4xl font-black text-brand-orange">৳{(selectedOrder.total || 0).toFixed(2)}</p>
                 </div>
               </div>
 
@@ -357,19 +356,19 @@ const AdminOrders: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                    <div className="space-y-1">
                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Revenue</p>
-                      <p className="text-xl font-black">৳{selectedOrder.costDetails.revenue.toFixed(2)}</p>
+                      <p className="text-xl font-black">৳{(selectedOrder.costDetails?.revenue || 0).toFixed(2)}</p>
                    </div>
                    <div className="space-y-1">
                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">COGS</p>
-                      <p className="text-xl font-black text-red-400">-৳{selectedOrder.costDetails.cogs.toFixed(2)}</p>
+                      <p className="text-xl font-black text-red-400">-৳{(selectedOrder.costDetails?.cogs || 0).toFixed(2)}</p>
                    </div>
                    <div className="space-y-1">
                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Shipping & Ad</p>
-                      <p className="text-xl font-black text-red-400">-৳{(selectedOrder.costDetails.shipping + selectedOrder.costDetails.marketing).toFixed(2)}</p>
+                      <p className="text-xl font-black text-red-400">-৳{((selectedOrder.costDetails?.shipping || 0) + (selectedOrder.costDetails?.marketing || 0)).toFixed(2)}</p>
                    </div>
                    <div className="space-y-1">
                       <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Net Profit</p>
-                      <p className="text-xl font-black text-brand-orange">+৳{selectedOrder.costDetails.profit.toFixed(2)}</p>
+                      <p className="text-xl font-black text-brand-orange">+৳{(selectedOrder.costDetails?.profit || 0).toFixed(2)}</p>
                    </div>
                 </div>
               </div>
@@ -407,7 +406,7 @@ const AdminOrders: React.FC = () => {
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Risk Factor</span>
                     </div>
                     <p className="text-sm text-gray-600 font-medium leading-relaxed mb-6">{fraudAnalysis.reason}</p>
-                    <button onClick={() => { db.toggleBlacklist(selectedOrder.customerPhone); alert('Identity quarantined in Blacklist.'); }} className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em] border-b-2 border-red-100 hover:border-red-600 pb-1 transition-all">
+                    <button onClick={async () => { await db.toggleBlacklist(selectedOrder.customerPhone); alert('Identity quarantined in Blacklist.'); }} className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em] border-b-2 border-red-100 hover:border-red-600 pb-1 transition-all">
                       Permanent Blacklist
                     </button>
                   </>
@@ -434,10 +433,10 @@ const AdminOrders: React.FC = () => {
                         </div>
                         <div>
                            <p className="text-sm font-black text-brand-black">{item.name}</p>
-                           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">৳{item.price} SKU price</p>
+                           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">৳{(item.price || 0)} SKU price</p>
                         </div>
                       </div>
-                      <p className="font-black text-brand-black text-lg">৳{(item.price * item.quantity).toFixed(2)}</p>
+                      <p className="font-black text-brand-black text-lg">৳{((item.price || 0) * (item.quantity || 1)).toFixed(2)}</p>
                     </div>
                   ))}
                 </div>

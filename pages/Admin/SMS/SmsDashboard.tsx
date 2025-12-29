@@ -1,36 +1,65 @@
-
 import React, { useState, useEffect } from 'react';
-import { Settings, FileText, History, Plus, Save, TrendingUp, MessageSquare, ShieldAlert, Trash2, DollarSign, X } from 'lucide-react';
+import { Settings, FileText, History, Plus, Save, TrendingUp, MessageSquare, ShieldAlert, Trash2, DollarSign, X, Loader2 } from 'lucide-react';
 import { OrderStatus, SmsConfig, SmsTemplate, SmsLog } from '../../../types';
 import { db } from '../../../services/db';
 
 const SmsDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'settings' | 'templates' | 'logs' | 'blacklist'>('settings');
-  const [config, setConfig] = useState<SmsConfig>(db.getSmsConfig());
-  const [templates, setTemplates] = useState<SmsTemplate[]>(db.getSmsTemplates());
-  const [logs, setLogs] = useState<SmsLog[]>(db.getSmsLogs());
-  const [blacklist, setBlacklist] = useState<string[]>(db.getBlacklist());
+  const [config, setConfig] = useState<SmsConfig | null>(null);
+  const [templates, setTemplates] = useState<SmsTemplate[]>([]);
+  const [logs, setLogs] = useState<SmsLog[]>([]);
+  const [blacklist, setBlacklist] = useState<string[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<SmsTemplate | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const saveConfig = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      const [conf, tpls, lg, bl] = await Promise.all([
+        db.getSmsConfig(),
+        db.getSmsTemplates(),
+        db.getSmsLogs(),
+        db.getBlacklist()
+      ]);
+      setConfig(conf);
+      setTemplates(tpls);
+      setLogs(lg);
+      setBlacklist(bl);
+      setLoading(false);
+    };
+    loadData();
+  }, []);
+
+  const saveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    db.saveSmsConfig(config);
-    alert('NisbiGate Configuration Updated Successfully.');
+    if (config) {
+      await db.saveSmsConfig(config);
+      alert('NisbiGate Configuration Updated Successfully.');
+    }
   };
 
-  const handleSaveTemplate = (e: React.FormEvent) => {
+  const handleSaveTemplate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTemplate) return;
     const updated = editingTemplate.id 
       ? templates.map(t => t.id === editingTemplate.id ? editingTemplate : t)
       : [...templates, { ...editingTemplate, id: `tpl-${Date.now()}` }];
     setTemplates(updated);
-    db.saveSmsTemplates(updated);
+    await db.saveSmsTemplates(updated);
     setEditingTemplate(null);
   };
 
   const inputClasses = "w-full px-5 py-4 rounded-2xl bg-brand-gray border border-gray-100 text-sm font-bold text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-4 focus:ring-brand-orange/10 outline-none transition duration-300";
   const labelClasses = "block text-[10px] font-black text-gray-400 uppercase mb-3 ml-1 tracking-widest";
+
+  if (loading || !config) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <Loader2 className="animate-spin text-brand-orange mb-4" size={48} />
+        <p className="font-black text-gray-400 uppercase tracking-widest text-xs">Booting Comms Engine...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-10">
@@ -210,6 +239,27 @@ const SmsDashboard: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {activeTab === 'blacklist' && (
+          <div className="bg-white p-12 rounded-[3rem] shadow-sm border border-gray-100">
+            <h3 className="text-2xl font-black text-gray-900 mb-6 flex items-center space-x-3">
+              <ShieldAlert className="text-red-500" />
+              <span>Fraud Shield Blacklist</span>
+            </h3>
+            <div className="space-y-4">
+              {blacklist.map(phone => (
+                <div key={phone} className="flex justify-between items-center p-4 bg-brand-gray rounded-2xl border border-gray-100">
+                  <span className="font-black text-brand-black">{phone}</span>
+                  <button onClick={async () => {
+                    await db.toggleBlacklist(phone);
+                    setBlacklist(prev => prev.filter(p => p !== phone));
+                  }} className="text-red-500 hover:text-red-700 transition"><Trash2 size={20} /></button>
+                </div>
+              ))}
+              {blacklist.length === 0 && <p className="text-gray-400 font-medium italic text-center py-10">No numbers in current fraud shield blacklist.</p>}
+            </div>
           </div>
         )}
       </div>

@@ -10,10 +10,14 @@ const AdminCategories: React.FC = () => {
   const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
 
   useEffect(() => {
-    setCategories(db.getCategories());
+    const fetchCategories = async () => {
+      const data = await db.getCategories();
+      setCategories(data);
+    };
+    fetchCategories();
   }, []);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingCategory?.name) return;
     
@@ -29,16 +33,16 @@ const AdminCategories: React.FC = () => {
       updated = [...categories, newCat];
     }
     setCategories(updated);
-    db.saveCategories(updated);
+    await db.saveCategories(updated);
     setIsModalOpen(false);
     setEditingCategory(null);
   };
 
-  const deleteCategory = (id: string) => {
+  const deleteCategory = async (id: string) => {
     if (confirm('Are you sure you want to delete this category?')) {
       const updated = categories.filter(c => c.id !== id);
       setCategories(updated);
-      db.saveCategories(updated);
+      await db.saveCategories(updated);
     }
   };
 
@@ -76,6 +80,7 @@ const AdminCategories: React.FC = () => {
             </div>
           </div>
         ))}
+        {categories.length === 0 && <div className="col-span-full p-12 text-center text-gray-400 font-bold">No categories found.</div>}
       </div>
 
       {isModalOpen && (

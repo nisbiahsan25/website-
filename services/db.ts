@@ -25,7 +25,7 @@ const apiRequest = async (action: string, method: string = 'GET', data?: any) =>
     if (!response.ok) {
         const errorText = await response.text();
         console.error(`API Error [${action}]: ${response.status}`, errorText);
-        throw new Error(`Server Error: ${response.status}`);
+        return null;
     }
     
     return await response.json();

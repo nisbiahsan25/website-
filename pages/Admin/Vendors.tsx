@@ -1,26 +1,34 @@
-
 import React, { useState, useEffect } from 'react';
-import { Plus, Layout, ShieldCheck, XCircle, TrendingUp, DollarSign, ExternalLink } from 'lucide-react';
+import { Plus, Layout, ShieldCheck, XCircle, TrendingUp, DollarSign, ExternalLink, Loader2 } from 'lucide-react';
 import { Vendor } from '../../types';
 import { db } from '../../services/db';
 
 const AdminVendors: React.FC = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Partial<Vendor> | null>(null);
 
   useEffect(() => {
-    setVendors(db.getVendors());
+    const load = async () => {
+      setLoading(true);
+      const data = await db.getVendors();
+      setVendors(Array.isArray(data) ? data : []);
+      setLoading(false);
+    };
+    load();
   }, []);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingVendor) return;
+    if (!editingVendor || !editingVendor.name) return;
+    
     const newVendor = {
       ...editingVendor,
       id: editingVendor.id || `v-${Date.now()}`,
       status: editingVendor.status || 'Active',
-      rating: editingVendor.rating || 5
+      rating: editingVendor.rating || 5,
+      slug: editingVendor.name.toLowerCase().replace(/\s+/g, '-')
     } as Vendor;
 
     const updated = editingVendor.id 
@@ -28,8 +36,9 @@ const AdminVendors: React.FC = () => {
       : [...vendors, newVendor];
 
     setVendors(updated);
-    db.saveVendors(updated);
+    await db.saveVendors(updated);
     setIsModalOpen(false);
+    setEditingVendor(null);
   };
 
   return (
@@ -48,40 +57,52 @@ const AdminVendors: React.FC = () => {
         </button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {vendors.map(vendor => (
-          <div key={vendor.id} className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm group hover:border-brand-orange transition-all duration-500">
-             <div className="flex justify-between items-start mb-6">
-                <div className="w-16 h-16 bg-brand-gray rounded-2xl flex items-center justify-center font-black text-2xl">
-                   {vendor.name.charAt(0)}
-                </div>
-                <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                  vendor.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                }`}>
-                  {vendor.status}
-                </div>
-             </div>
-             <h3 className="text-xl font-black text-brand-black mb-1">{vendor.name}</h3>
-             <p className="text-xs text-gray-400 font-medium mb-6">Commission: {vendor.commissionRate}%</p>
-             
-             <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="p-4 bg-brand-gray rounded-2xl">
-                   <p className="text-[10px] font-black text-gray-400 uppercase">Rating</p>
-                   <p className="font-black text-brand-orange">{vendor.rating} ★</p>
-                </div>
-                <div className="p-4 bg-brand-gray rounded-2xl">
-                   <p className="text-[10px] font-black text-gray-400 uppercase">Payouts</p>
-                   <p className="font-black text-brand-black">$0.00</p>
-                </div>
-             </div>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="animate-spin text-brand-orange mb-4" size={48} />
+          <p className="font-bold text-gray-400">Loading Marketplace Partners...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {vendors.map(vendor => (
+            <div key={vendor.id} className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-sm group hover:border-brand-orange transition-all duration-500">
+               <div className="flex justify-between items-start mb-6">
+                  <div className="w-16 h-16 bg-brand-gray rounded-2xl flex items-center justify-center font-black text-2xl">
+                     {vendor.name ? vendor.name.charAt(0) : '?'}
+                  </div>
+                  <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                    vendor.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                  }`}>
+                    {vendor.status}
+                  </div>
+               </div>
+               <h3 className="text-xl font-black text-brand-black mb-1">{vendor.name}</h3>
+               <p className="text-xs text-gray-400 font-medium mb-6">Commission: {vendor.commissionRate}%</p>
+               
+               <div className="grid grid-cols-2 gap-4 mb-8">
+                  <div className="p-4 bg-brand-gray rounded-2xl">
+                     <p className="text-[10px] font-black text-gray-400 uppercase">Rating</p>
+                     <p className="font-black text-brand-orange">{vendor.rating} ★</p>
+                  </div>
+                  <div className="p-4 bg-brand-gray rounded-2xl">
+                     <p className="text-[10px] font-black text-gray-400 uppercase">Payouts</p>
+                     <p className="font-black text-brand-black">৳0.00</p>
+                  </div>
+               </div>
 
-             <div className="flex space-x-2">
-                <button className="flex-grow bg-brand-gray text-brand-black py-3 rounded-xl font-bold text-sm hover:bg-gray-200 transition">Dashboard</button>
-                <button className="p-3 bg-brand-gray text-gray-400 rounded-xl hover:text-brand-orange transition"><DollarSign size={20} /></button>
-             </div>
-          </div>
-        ))}
-      </div>
+               <div className="flex space-x-2">
+                  <button className="flex-grow bg-brand-gray text-brand-black py-3 rounded-xl font-bold text-sm hover:bg-gray-200 transition">Dashboard</button>
+                  <button className="p-3 bg-brand-gray text-gray-400 rounded-xl hover:text-brand-orange transition"><DollarSign size={20} /></button>
+               </div>
+            </div>
+          ))}
+          {vendors.length === 0 && (
+            <div className="col-span-full py-20 text-center bg-white rounded-[3rem] border border-gray-100">
+              <p className="font-bold text-gray-400">No vendors connected yet.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {isModalOpen && editingVendor && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-brand-black/40 backdrop-blur-xl">
@@ -90,13 +111,14 @@ const AdminVendors: React.FC = () => {
               <form onSubmit={handleSave} className="space-y-6">
                  <div>
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Company Name</label>
-                    <input value={editingVendor.name} onChange={e => setEditingVendor({...editingVendor, name: e.target.value})} className="w-full px-6 py-4 bg-brand-gray rounded-2xl border-none font-bold" />
+                    <input required value={editingVendor.name} onChange={e => setEditingVendor({...editingVendor, name: e.target.value})} className="w-full px-6 py-4 bg-brand-gray rounded-2xl border-none font-bold outline-none focus:ring-2 focus:ring-brand-orange" />
                  </div>
                  <div>
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Commission Rate (%)</label>
-                    <input type="number" value={editingVendor.commissionRate} onChange={e => setEditingVendor({...editingVendor, commissionRate: parseInt(e.target.value)})} className="w-full px-6 py-4 bg-brand-gray rounded-2xl border-none font-bold" />
+                    <input required type="number" value={editingVendor.commissionRate} onChange={e => setEditingVendor({...editingVendor, commissionRate: parseInt(e.target.value)})} className="w-full px-6 py-4 bg-brand-gray rounded-2xl border-none font-bold outline-none focus:ring-2 focus:ring-brand-orange" />
                  </div>
-                 <button type="submit" className="w-full bg-brand-black text-white py-5 rounded-2xl font-black text-lg shadow-2xl">Authorize Vendor</button>
+                 <button type="submit" className="w-full bg-brand-black text-white py-5 rounded-2xl font-black text-lg shadow-2xl hover:bg-brand-orange transition-colors">Authorize Vendor</button>
+                 <button type="button" onClick={() => { setIsModalOpen(false); setEditingVendor(null); }} className="w-full py-4 text-gray-400 font-bold">Cancel</button>
               </form>
            </div>
         </div>

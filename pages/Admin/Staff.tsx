@@ -14,8 +14,13 @@ const AdminStaff: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    setStaff(db.getStaff());
-    setRoles(db.getRoles());
+    const loadData = async () => {
+      const staffList = await db.getStaff();
+      const roleList = await db.getRoles();
+      setStaff(staffList);
+      setRoles(roleList);
+    };
+    loadData();
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
@@ -46,7 +51,7 @@ const AdminStaff: React.FC = () => {
     }
     
     setStaff(finalStaffList);
-    db.saveStaff(finalStaffList);
+    await db.saveStaff(finalStaffList);
     authService.logAction('SAVE_STAFF', 'Staff', updatedStaff.id, { email: updatedStaff.email });
     setIsModalOpen(false);
     setPassword('');
@@ -86,7 +91,7 @@ const AdminStaff: React.FC = () => {
               <tr key={user.id} className="hover:bg-brand-orange/5 transition group">
                 <td className="px-10 py-6">
                   <div className="flex items-center space-x-4">
-                     <div className="w-10 h-10 bg-brand-black text-white rounded-xl flex items-center justify-center font-black uppercase">{user.name.charAt(0)}</div>
+                     <div className="w-10 h-10 bg-brand-black text-white rounded-xl flex items-center justify-center font-black uppercase">{user.name ? user.name.charAt(0) : '?'}</div>
                      <div>
                         <p className="font-bold text-brand-black">{user.name}</p>
                         <p className="text-xs text-gray-400 font-medium">{user.email}</p>
@@ -116,6 +121,7 @@ const AdminStaff: React.FC = () => {
                 </td>
               </tr>
             ))}
+            {staff.length === 0 && <tr><td colSpan={4} className="p-12 text-center text-gray-400 font-bold">No staff members found.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -134,6 +140,27 @@ const AdminStaff: React.FC = () => {
                  <div>
                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Email Address</label>
                     <input required type="email" value={editingStaff.email} onChange={e => setEditingStaff({...editingStaff, email: e.target.value})} className={inputClasses} />
+                 </div>
+
+                 <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 mb-2 block">Assign Roles</label>
+                    <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto no-scrollbar bg-brand-gray p-4 rounded-2xl">
+                       {roles.map(role => (
+                          <label key={role.id} className="flex items-center space-x-2 cursor-pointer">
+                             <input 
+                                type="checkbox" 
+                                checked={editingStaff.roleIds?.includes(role.id)}
+                                onChange={e => {
+                                   const ids = editingStaff.roleIds || [];
+                                   const updated = e.target.checked ? [...ids, role.id] : ids.filter(id => id !== role.id);
+                                   setEditingStaff({...editingStaff, roleIds: updated});
+                                }}
+                                className="accent-brand-orange"
+                             />
+                             <span className="text-xs font-bold text-gray-700">{role.name}</span>
+                          </label>
+                       ))}
+                    </div>
                  </div>
                  
                  <div className="relative">

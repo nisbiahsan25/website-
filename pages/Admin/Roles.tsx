@@ -57,7 +57,11 @@ const AdminRoles: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    setRoles(db.getRoles());
+    const fetchRoles = async () => {
+      const data = await db.getRoles();
+      setRoles(data);
+    };
+    fetchRoles();
   }, []);
 
   const handleTogglePermission = (slug: PermissionSlug) => {
@@ -68,7 +72,7 @@ const AdminRoles: React.FC = () => {
     setSelectedRole({ ...selectedRole, permissions: perms });
   };
 
-  const saveRole = () => {
+  const saveRole = async () => {
     if (!selectedRole) return;
     let updated;
     if (selectedRole.id) {
@@ -78,7 +82,7 @@ const AdminRoles: React.FC = () => {
       updated = [...roles, newRole];
     }
     setRoles(updated);
-    db.saveRoles(updated);
+    await db.saveRoles(updated);
     authService.logAction('SAVE_ROLE', 'Role', selectedRole.id, { name: selectedRole.name });
     setIsModalOpen(false);
   };
@@ -117,6 +121,7 @@ const AdminRoles: React.FC = () => {
              </button>
           </div>
         ))}
+        {roles.length === 0 && <div className="col-span-full p-12 text-center text-gray-400 font-bold">No roles defined.</div>}
       </div>
 
       {isModalOpen && selectedRole && (
