@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   ShoppingBag, Star, Shield, ArrowRight, Truck, RefreshCw, 
   ChevronRight, Home as HomeIcon, Package, Clock, Share2, 
@@ -10,8 +9,13 @@ import { Product } from '../types';
 import { trackEvent } from '../services/tracking';
 import { db } from '../services/db';
 
-const ProductDetail: React.FC = () => {
+interface Props {
+  addToCart: (product: Product, quantity: number) => void;
+}
+
+const ProductDetail: React.FC<Props> = ({ addToCart }) => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [quantity, setQuantity] = useState(1);
@@ -32,6 +36,20 @@ const ProductDetail: React.FC = () => {
     loadProduct();
     window.scrollTo(0, 0);
   }, [id]);
+
+  const handleBuyNow = () => {
+    if (product) {
+      addToCart(product, quantity);
+      navigate('/checkout');
+    }
+  };
+
+  const handleAddToCartClick = () => {
+    if (product) {
+      addToCart(product, quantity);
+      alert('Product added to cart!');
+    }
+  };
 
   if (!product) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
@@ -120,7 +138,6 @@ const ProductDetail: React.FC = () => {
                         </li>
                       ))}
                    </ul>
-                   <button className="mt-4 text-[10px] font-black text-brand-orange uppercase tracking-widest hover:underline">View More Info</button>
                 </div>
 
                 {/* Payment Options */}
@@ -165,16 +182,22 @@ const ProductDetail: React.FC = () => {
                    </div>
                    <button 
                     className="flex-grow bg-brand-black text-white py-4 px-8 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center space-x-3 hover:bg-brand-orange transition shadow-xl shadow-brand-orange/20 active:scale-95"
-                    onClick={() => {}}
+                    onClick={handleBuyNow}
                    >
                       <ShoppingBag size={18} />
                       <span>Buy Now</span>
+                   </button>
+                   <button 
+                    className="flex-grow bg-white text-brand-black border-2 border-brand-black py-4 px-8 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-brand-black hover:text-white transition active:scale-95"
+                    onClick={handleAddToCartClick}
+                   >
+                      <span>Add to Cart</span>
                    </button>
                 </div>
               </div>
             </div>
 
-            {/* Tabs for Specification, Description, etc. */}
+            {/* Tabs content remains same */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
                <div className="flex border-b border-gray-100 bg-brand-gray/50 px-4">
                   {[
@@ -208,23 +231,6 @@ const ProductDetail: React.FC = () => {
                                 <div className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Model</div>
                                 <div className="px-6 py-4 text-sm font-bold text-gray-700 col-span-2">{product.sku}</div>
                              </div>
-                             <div className="grid grid-cols-3 bg-brand-gray/30">
-                                <div className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Category</div>
-                                <div className="px-6 py-4 text-sm font-bold text-gray-700 col-span-2 capitalize">{product.category}</div>
-                             </div>
-                             <div className="grid grid-cols-3">
-                                <div className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Weight</div>
-                                <div className="px-6 py-4 text-sm font-bold text-gray-700 col-span-2">{product.weight} kg</div>
-                             </div>
-                          </div>
-                       </div>
-                       <div>
-                          <h4 className="inline-block px-4 py-1.5 bg-brand-orange/5 text-brand-orange rounded-xl text-[10px] font-black uppercase tracking-widest mb-6 border border-brand-orange/10">Warranty Information</h4>
-                          <div className="divide-y divide-gray-50 border border-gray-50 rounded-2xl overflow-hidden">
-                             <div className="grid grid-cols-3 bg-brand-gray/30">
-                                <div className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Warranty</div>
-                                <div className="px-6 py-4 text-sm font-bold text-gray-700 col-span-2">01 Year Official Brand Warranty</div>
-                             </div>
                           </div>
                        </div>
                     </div>
@@ -242,8 +248,7 @@ const ProductDetail: React.FC = () => {
                        <div className="w-20 h-20 bg-brand-gray rounded-full flex items-center justify-center mx-auto text-gray-300">
                           <Info size={40} />
                        </div>
-                       <p className="text-gray-400 font-bold">There are no questions asked yet. Be the first one to ask a question.</p>
-                       <button className="px-8 py-3 border-2 border-brand-orange text-brand-orange rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-orange hover:text-white transition">Ask Question</button>
+                       <p className="text-gray-400 font-bold">No questions yet.</p>
                     </div>
                   )}
 
@@ -252,18 +257,15 @@ const ProductDetail: React.FC = () => {
                        <div className="w-20 h-20 bg-brand-gray rounded-full flex items-center justify-center mx-auto text-gray-300">
                           <Tag size={40} />
                        </div>
-                       <p className="text-gray-400 font-bold">This product has no reviews yet. Be the first one to write a review.</p>
-                       <button className="px-8 py-3 border-2 border-brand-orange text-brand-orange rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-orange hover:text-white transition">Write a Review</button>
+                       <p className="text-gray-400 font-bold">No reviews yet.</p>
                     </div>
                   )}
                </div>
             </div>
           </div>
 
-          {/* Right Sidebar: Related Products & Ads */}
+          {/* Right Sidebar */}
           <div className="col-span-12 lg:col-span-3 space-y-8">
-            
-            {/* Related Products Widget */}
             <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
                <div className="px-8 py-6 border-b border-gray-50 bg-brand-gray/50">
                   <h3 className="text-xs font-black text-brand-black uppercase tracking-widest">Related Products</h3>
@@ -283,20 +285,8 @@ const ProductDetail: React.FC = () => {
                </div>
             </div>
 
-            {/* Recently Viewed (Placeholder) */}
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-               <div className="px-8 py-6 border-b border-gray-50 bg-brand-gray/50">
-                  <h3 className="text-xs font-black text-brand-black uppercase tracking-widest">Recently Viewed</h3>
-               </div>
-               <div className="p-12 text-center">
-                  <Clock size={32} className="mx-auto text-gray-200 mb-4" />
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">No recent history</p>
-               </div>
-            </div>
-
-            {/* Trust Badges Widget */}
             <div className="bg-brand-black rounded-[2.5rem] p-8 text-white space-y-6 shadow-xl shadow-brand-black/20 relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-8 opacity-5"><Zap size={100} /></div>
+               <div className="absolute top-0 right-0 p-8 opacity-5"><RefreshCw size={100} /></div>
                <div className="flex items-center space-x-3">
                   <div className="p-2 bg-brand-orange rounded-xl"><Shield size={16} /></div>
                   <span className="text-[10px] font-black uppercase tracking-widest">Purchase Protection</span>
@@ -307,27 +297,16 @@ const ProductDetail: React.FC = () => {
                      <span>Express Nationwide Delivery</span>
                   </div>
                   <div className="flex items-center space-x-3 text-xs font-medium text-gray-400">
-                     <CreditCard size={14} className="text-brand-orange" />
-                     <span>EMI with 24 Major Banks</span>
-                  </div>
-                  <div className="flex items-center space-x-3 text-xs font-medium text-gray-400">
                      <RefreshCw size={14} className="text-brand-orange" />
                      <span>7 Day Easy Return Policy</span>
                   </div>
                </div>
             </div>
-
           </div>
         </div>
       </div>
     </div>
   );
 };
-
-const Zap = ({ size, className }: { size: number, className?: string }) => (
-  <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-  </svg>
-);
 
 export default ProductDetail;

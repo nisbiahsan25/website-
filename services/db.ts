@@ -5,7 +5,6 @@ import { Product, Order, Category, SmsConfig, SmsTemplate, SmsLog, OrderStatus, 
  * Communicates with api/index.php for all data storage.
  */
 
-// Use relative path for maximum compatibility
 const API_URL = 'api/index.php';
 
 const apiRequest = async (action: string, method: string = 'GET', data?: any) => {
@@ -23,14 +22,13 @@ const apiRequest = async (action: string, method: string = 'GET', data?: any) =>
     const response = await fetch(url, options);
     
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`API Error [${action}]: ${response.status}`, errorText);
+        console.warn(`API [${action}] returned ${response.status}. Using local defaults.`);
         return null;
     }
     
     return await response.json();
   } catch (e) {
-    console.error(`Persistence Connectivity Issue [${action}]:`, e);
+    console.warn(`API Connectivity Issue [${action}]:`, e);
     return null;
   }
 };
@@ -76,7 +74,9 @@ export const db = {
 
   getPageBySlug: async (slug: string): Promise<CMSPage | undefined> => {
      const pages = await db.getPages();
-     if (slug === 'home' && (!pages || pages.length === 0)) {
+     const found = Array.isArray(pages) ? pages.find(p => p.slug === slug) : undefined;
+     
+     if (slug === 'home' && (!found)) {
         return {
           id: 'home-default',
           title: 'Nisbimart Home',
@@ -92,7 +92,7 @@ export const db = {
           createdAt: new Date().toISOString()
         } as CMSPage;
      }
-     return pages.find(p => p.slug === slug);
+     return found;
   },
 
   getStaff: async (): Promise<StaffUser[]> => {
@@ -133,7 +133,7 @@ export const db = {
 
   getSmsTemplates: async (): Promise<SmsTemplate[]> => {
     const data = await apiRequest('get_sms_templates');
-    if (data && data.length > 0) return data;
+    if (Array.isArray(data) && data.length > 0) return data;
     return [
       { id: 't1', name: 'Order Confirmation', content: 'Hello {{name}}, your order {{order_id}} for {{total}} has been received.', triggerStatus: OrderStatus.PENDING, isActive: true },
       { id: 't2', name: 'Order Shipped', content: 'Good news {{name}}! Your order {{order_id}} is on its way.', triggerStatus: OrderStatus.SHIPPED, isActive: true }
@@ -156,21 +156,23 @@ export const db = {
   getCustomers: async () => {
     const orders = await db.getOrders();
     const customersMap = new Map();
-    orders.forEach((order: Order) => {
-      if (!customersMap.has(order.customerEmail)) {
-        customersMap.set(order.customerEmail, {
-          name: order.customerName,
-          email: order.customerEmail,
-          phone: order.customerPhone,
-          orderCount: 0,
-          totalSpent: 0,
-          lastOrder: order.createdAt
-        });
-      }
-      const c = customersMap.get(order.customerEmail);
-      c.orderCount++;
-      c.totalSpent += order.total;
-    });
+    if (Array.isArray(orders)) {
+      orders.forEach((order: Order) => {
+        if (!customersMap.has(order.customerEmail)) {
+          customersMap.set(order.customerEmail, {
+            name: order.customerName,
+            email: order.customerEmail,
+            phone: order.customerPhone,
+            orderCount: 0,
+            totalSpent: 0,
+            lastOrder: order.createdAt
+          });
+        }
+        const c = customersMap.get(order.customerEmail);
+        c.orderCount++;
+        c.totalSpent += (order.total || 0);
+      });
+    }
     return Array.from(customersMap.values());
   },
 

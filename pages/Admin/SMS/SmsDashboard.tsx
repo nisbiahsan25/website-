@@ -22,9 +22,9 @@ const SmsDashboard: React.FC = () => {
         db.getBlacklist()
       ]);
       setConfig(conf);
-      setTemplates(tpls);
-      setLogs(lg);
-      setBlacklist(bl);
+      setTemplates(Array.isArray(tpls) ? tpls : []);
+      setLogs(Array.isArray(lg) ? lg : []);
+      setBlacklist(Array.isArray(bl) ? bl : []);
       setLoading(false);
     };
     loadData();
@@ -54,7 +54,7 @@ const SmsDashboard: React.FC = () => {
 
   if (loading || !config) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Loader2 className="animate-spin text-brand-orange mb-4" size={48} />
         <p className="font-black text-gray-400 uppercase tracking-widest text-xs">Booting Comms Engine...</p>
       </div>
@@ -71,7 +71,7 @@ const SmsDashboard: React.FC = () => {
         <div className="bg-white border border-gray-100 rounded-[2rem] px-8 py-4 shadow-sm flex items-center space-x-6">
           <div className="flex flex-col">
             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Gateway Balance</span>
-            <span className="text-xl font-black text-brand-orange">৳{config.balance.toFixed(2)}</span>
+            <span className="text-xl font-black text-brand-orange">৳{(config.balance || 0).toFixed(2)}</span>
           </div>
           <button className="bg-brand-black text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-orange transition shadow-lg shadow-brand-orange/20">Top Up</button>
         </div>
@@ -237,6 +237,7 @@ const SmsDashboard: React.FC = () => {
                     </td>
                   </tr>
                 ))}
+                {logs.length === 0 && <tr><td colSpan={4} className="p-12 text-center text-gray-400">No delivery logs found.</td></tr>}
               </tbody>
             </table>
           </div>

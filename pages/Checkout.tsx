@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, CreditCard, Truck, Lock, User, Wallet } from 'lucide-react';
 import { CartItem, OrderStatus, Order } from '../types';
 import { trackEvent } from '../services/tracking';
 import { useTranslation } from '../services/i18n';
+import { db } from '../services/db';
 
 interface Props {
   cart: CartItem[];
@@ -27,7 +27,7 @@ const Checkout: React.FC<Props> = ({ cart, clearCart }) => {
   });
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const shipping = subtotal > 1000 ? 0 : 60; // Adjusting for BDT scale
+  const shipping = subtotal > 1000 ? 0 : 60; 
   const total = subtotal + shipping;
 
   useEffect(() => {
@@ -52,9 +52,9 @@ const Checkout: React.FC<Props> = ({ cart, clearCart }) => {
 
     setLoading(true);
     
-    setTimeout(() => {
+    try {
       const cogs = cart.reduce((sum, item) => sum + (item.cost * item.quantity), 0);
-      const marketing = 150; // BDT scale
+      const marketing = 150; 
       const profit = total - cogs - shipping - marketing;
       const utmData = JSON.parse(localStorage.getItem('nexus_utm') || '{}');
       const now = new Date().toISOString();
@@ -92,15 +92,20 @@ const Checkout: React.FC<Props> = ({ cart, clearCart }) => {
         paymentType: 'COD'
       };
 
-      const orders = JSON.parse(localStorage.getItem('nexus_orders') || '[]');
-      orders.push(order);
-      localStorage.setItem('nexus_orders', JSON.stringify(orders));
+      // SERVER SYNC: Get current orders and append new one
+      const existingOrders = await db.getOrders();
+      const updatedOrders = [order, ...(Array.isArray(existingOrders) ? existingOrders : [])];
+      await db.updateOrders(updatedOrders);
 
       trackEvent('Purchase', { value: total, currency: 'BDT', num_items: cart.length, order_id: order.id });
       clearCart();
       setLoading(false);
       navigate(`/tracking?id=${order.id}`);
-    }, 2000);
+    } catch (err) {
+      console.error("Order Failed:", err);
+      alert("Order could not be saved to server. Please try again.");
+      setLoading(false);
+    }
   };
 
   const inputClasses = "w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-brand-orange/30 focus:border-transparent outline-none transition duration-200";
